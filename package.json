@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
     "dev": "next dev",
     "lint": "eslint .",
+    "migration:new": "supabase migration new",
     "start": "next start"
   },
   "dependencies": {

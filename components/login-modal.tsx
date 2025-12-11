@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { X, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { signUp, signIn } from "@/app/actions/auth"
+import { useRouter } from "next/navigation"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -17,31 +19,72 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModalProps) {
+  const router = useRouter()
   const [mode, setMode] = useState<"login" | "signup">(initialMode)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [status, setStatus] = useState<"idle" | "loading">("idle")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode)
+      setError(null)
     }
   }, [isOpen, initialMode])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus("loading")
+    setError(null)
 
-    if (mode === "signup") {
-      console.log("[v0] Sign up submitted:", { email })
-    } else {
-      console.log("[v0] Login submitted:", { email })
-    }
+    const formData = new FormData()
+    formData.append("email", email)
+    formData.append("password", password)
 
-    setTimeout(() => {
+    try {
+      if (mode === "signup") {
+        const result = await signUp(formData)
+
+        if (!result.success) {
+          setError(result.error || "Sign up failed")
+          setStatus("idle")
+          return
+        }
+
+        console.log("[v0] Signup successful, redirecting to verification")
+        handleClose()
+        router.push("/verification")
+      } else {
+        const result = await signIn(formData)
+
+        if (!result.success) {
+          setError(result.error || "Sign in failed")
+          setStatus("idle")
+          return
+        }
+
+        console.log("[v0] Signin successful:", result)
+        handleClose()
+
+        if (result.needsVerification) {
+          router.push("/verification")
+        } else if (result.needsOnboarding) {
+          router.push(`/onboarding/${result.userType}`)
+        } else if (result.userType === "talent") {
+          router.push("/dashboard/talent")
+        } else if (result.userType === "business") {
+          router.push("/dashboard/business")
+        } else {
+          router.push("/")
+        }
+      }
+    } catch (err) {
+      console.error("[v0] Auth error:", err)
+      setError("An unexpected error occurred. Please try again.")
       setStatus("idle")
-    }, 1000)
+    }
   }
 
   const handleClose = () => {
@@ -51,6 +94,7 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
       setPassword("")
       setShowPassword(false)
       setStatus("idle")
+      setError(null)
       setMode(initialMode)
     }, 300)
   }
@@ -60,6 +104,7 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
     setEmail("")
     setPassword("")
     setShowPassword(false)
+    setError(null)
   }
 
   return (
@@ -129,6 +174,12 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
             </div>
           </div>
 
+          {error && (
+            <div className="mb-2 sm:mb-2.5 p-2 bg-red-500/10 border border-red-500/50 rounded-lg">
+              <p className="text-red-400 text-xs sm:text-sm text-center">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-2.5">
             <div className="space-y-0.5">
               <Label htmlFor="email" className="text-gray-400 text-xs sm:text-sm">
@@ -159,6 +210,7 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={8}
                   className="text-white placeholder:text-gray-600 h-10 sm:h-11 rounded-lg pr-10 text-sm"
                   style={{ backgroundColor: "#161618", borderColor: "#18181A" }}
                   disabled={status === "loading"}
