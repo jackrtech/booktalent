@@ -7,11 +7,14 @@ export async function submitWaitlist(formData: FormData) {
   const name = ((formData.get("name") as string) || "").trim()
   const email = ((formData.get("email") as string) || "").trim().toLowerCase()
 
-  console.log("[v0] SERVER ACTION HIT:", { name, email })
+  console.log("[v0] ============ WAITLIST SUBMISSION START ============")
+  console.log("[v0] Received data:", { name, email })
+  console.log("[v0] FormData entries:", Array.from(formData.entries()))
 
   // Name: 2+ alphabetic characters (including international), max 50 chars
   const nameRegex = /^[\p{L}\s'-]{2,50}$/u
   if (!nameRegex.test(name)) {
+    console.log("[v0] VALIDATION FAILED: Invalid name")
     return {
       success: false,
       error: "Name must be at least 2 letters and contain only alphabetic characters.",
@@ -21,6 +24,7 @@ export async function submitWaitlist(formData: FormData) {
   // Email: Basic email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
+    console.log("[v0] VALIDATION FAILED: Invalid email")
     return {
       success: false,
       error: "Please enter a valid email address.",
@@ -28,11 +32,16 @@ export async function submitWaitlist(formData: FormData) {
   }
 
   if (email.length > 100) {
+    console.log("[v0] VALIDATION FAILED: Email too long")
     return {
       success: false,
       error: "Email is too long.",
     }
   }
+
+  console.log("[v0] Validation passed, creating Supabase client...")
+  console.log("[v0] SUPABASE_URL exists:", !!process.env.SUPABASE_URL)
+  console.log("[v0] SUPABASE_SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: {
@@ -41,7 +50,7 @@ export async function submitWaitlist(formData: FormData) {
     },
   })
 
-  console.log("[v0] Checking for existing user...")
+  console.log("[v0] Checking for existing user in waitlist...")
   const { data: existingUser, error: checkError } = await supabase
     .from("waitlist")
     .select("name")
@@ -49,8 +58,12 @@ export async function submitWaitlist(formData: FormData) {
     .single()
 
   if (checkError && checkError.code !== "PGRST116") {
-    // PGRST116 means no rows found, which is what we want
-    console.error("[v0] Database check error:", checkError)
+    console.error("[v0] DATABASE CHECK ERROR:", {
+      message: checkError.message,
+      details: checkError.details,
+      hint: checkError.hint,
+      code: checkError.code,
+    })
     return {
       success: false,
       error: "An error occurred. Please try again.",
@@ -58,20 +71,24 @@ export async function submitWaitlist(formData: FormData) {
   }
 
   if (existingUser) {
-    console.log("[v0] User already exists in waitlist")
-    // User already exists
+    console.log("[v0] User already exists in waitlist:", existingUser)
     return {
       success: false,
       duplicate: true,
-      existingName: name, // Using form-submitted name instead of existingUser.name
+      existingName: name,
     }
   }
 
-  console.log("[v0] Inserting new user into waitlist...")
+  console.log("[v0] No existing user found, proceeding with insert...")
   const { data, error } = await supabase.from("waitlist").insert({ name, email }).select().single()
 
   if (error) {
-    console.error("[v0] Insert error:", error)
+    console.error("[v0] INSERT ERROR:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    })
     return {
       success: false,
       error: "An error occurred. Please try again.",
@@ -79,8 +96,8 @@ export async function submitWaitlist(formData: FormData) {
   }
 
   if (data) {
-    console.log("[v0] User successfully inserted into database:", { name, email })
-    console.log("[v0] Checking environment variables...")
+    console.log("[v0] User successfully inserted:", data)
+    console.log("[v0] Checking email environment variables...")
     console.log("[v0] POSTMARK_API_TOKEN exists:", !!process.env.POSTMARK_API_TOKEN)
     console.log("[v0] POSTMARK_SENDER_EMAIL:", process.env.POSTMARK_SENDER_EMAIL)
 
@@ -128,9 +145,7 @@ export async function submitWaitlist(formData: FormData) {
         </html>
       `
 
-      console.log("[v0] Attempting to send email to:", email)
-      console.log("[v0] Email from:", process.env.POSTMARK_SENDER_EMAIL)
-
+      console.log("[v0] Attempting to send email...")
       const emailResult = await client.sendEmail({
         From: process.env.POSTMARK_SENDER_EMAIL!,
         To: email,
@@ -140,19 +155,17 @@ export async function submitWaitlist(formData: FormData) {
         MessageStream: "outbound",
       })
 
-      console.log("[v0] Email sent successfully!")
-      console.log("[v0] Postmark response:", emailResult)
-      debugInfo.push("Email sent successfully!")
-      debugInfo.push(`Postmark MessageID: ${emailResult.MessageID}`)
-
-      return { success: true, debug: debugInfo.join(" | ") }
+      console.log("[v0] Email sent successfully:", emailResult.MessageID)
+      console.log("[v0] ============ WAITLIST SUBMISSION SUCCESS ============")
+      return { success: true }
     } catch (emailError) {
-      debugInfo.push("EMAIL ERROR!")
-      debugInfo.push(`Error: ${emailError instanceof Error ? emailError.message : String(emailError)}`)
-
-      return { success: true, debug: debugInfo.join(" | "), emailError: true }
+      console.error("[v0] EMAIL SEND ERROR:", emailError)
+      console.log("[v0] User was added to waitlist but email failed")
+      console.log("[v0] ============ WAITLIST SUBMISSION PARTIAL SUCCESS ============")
+      return { success: true, emailError: true }
     }
   }
 
+  console.log("[v0] ============ WAITLIST SUBMISSION END ============")
   return { success: true }
 }

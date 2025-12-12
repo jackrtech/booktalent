@@ -186,3 +186,41 @@ export async function signOut() {
   await supabase.auth.signOut()
   redirect("/")
 }
+
+export async function signInWithGoogle() {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+    cookies: {
+      get: (name: string) => cookieStore.get(name)?.value,
+      set: (name: string, value: string, options: any) => {
+        cookieStore.set({ name, value, ...options })
+      },
+      remove: (name: string, options: any) => {
+        cookieStore.set({ name, value: "", ...options })
+      },
+    },
+  })
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    console.error("[v0] Google OAuth error:", error)
+    return {
+      success: false,
+      error: error.message,
+    }
+  }
+
+  if (data.url) {
+    redirect(data.url)
+  }
+
+  return {
+    success: true,
+  }
+}
