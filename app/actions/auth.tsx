@@ -1,7 +1,7 @@
 "use server"
 
 import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 export async function signUp(formData: FormData) {
@@ -188,7 +188,16 @@ export async function signOut() {
 }
 
 export async function signInWithGoogle() {
+  console.log("[v0] Starting Google OAuth flow")
+
   const cookieStore = await cookies()
+  const headersList = await headers()
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
+  const redirectUrl = `${siteUrl}/auth/callback`
+
+  console.log("[v0] OAuth redirect URL:", redirectUrl)
+
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
     cookies: {
       get: (name: string) => cookieStore.get(name)?.value,
@@ -204,12 +213,16 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+      redirectTo: redirectUrl,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   })
 
   if (error) {
-    console.error("[v0] Google OAuth error:", error)
+    console.error("[v0] Google OAuth initiation error:", error)
     return {
       success: false,
       error: error.message,
@@ -217,6 +230,7 @@ export async function signInWithGoogle() {
   }
 
   if (data.url) {
+    console.log("[v0] Redirecting to Google OAuth:", data.url)
     redirect(data.url)
   }
 

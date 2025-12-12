@@ -127,10 +127,17 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
     setStatus("loading")
     setError(null)
 
+    const timeoutId = setTimeout(() => {
+      console.log("[v0] OAuth timeout - user likely cancelled")
+      setStatus("idle")
+    }, 30000) // 30 second timeout
+
     try {
       await signInWithGoogle()
       // If we reach here without redirect, something went wrong
+      clearTimeout(timeoutId)
     } catch (err) {
+      clearTimeout(timeoutId)
       console.error("[v0] Google OAuth error:", err)
       setError("Failed to connect to Google. Please try again.")
       setStatus("idle")
