@@ -42,6 +42,9 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/verification`,
+      data: {
+        email: email,
+      },
     },
   })
 
@@ -50,6 +53,7 @@ export async function signUp(formData: FormData) {
     return {
       success: false,
       error: authError.message,
+      details: authError,
     }
   }
 
@@ -60,10 +64,26 @@ export async function signUp(formData: FormData) {
     }
   }
 
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const serviceSupabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: any) => {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove: (name: string, options: any) => {
+          cookieStore.set({ name, value: "", ...options })
+        },
+      },
+    },
+  )
+
+  const { error: profileError } = await serviceSupabase.from("profiles").insert({
     id: authData.user.id,
     email: email,
-    user_type: null, // Will be set during verification flow
+    user_type: null,
     is_verified: false,
     verification_status: "pending",
     onboarding_completed: false,
@@ -73,15 +93,17 @@ export async function signUp(formData: FormData) {
     console.error("[v0] Profile creation error:", profileError)
     return {
       success: false,
-      error: "Account created but profile setup failed. Please contact support.",
+      error: "Account created but profile setup failed. Please try signing in.",
+      details: profileError,
     }
   }
 
-  console.log("[v0] User successfully created:", { email, userId: authData.user.id })
+  console.log("[v0] User and profile successfully created:", { email, userId: authData.user.id })
 
   return {
     success: true,
     userId: authData.user.id,
+    email: email,
   }
 }
 

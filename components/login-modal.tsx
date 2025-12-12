@@ -39,33 +39,48 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
     setStatus("loading")
     setError(null)
 
+    console.log("[v0] Starting auth process, mode:", mode)
+
     const formData = new FormData()
     formData.append("email", email)
     formData.append("password", password)
 
     try {
       if (mode === "signup") {
+        console.log("[v0] Calling signUp action...")
         const result = await signUp(formData)
 
+        console.log("[v0] SignUp result:", result)
+
         if (!result.success) {
+          console.error("[v0] SignUp failed:", result.error, result.details)
           setError(result.error || "Sign up failed")
           setStatus("idle")
           return
         }
 
-        console.log("[v0] Signup successful, redirecting to verification")
+        console.log("[v0] Signup successful! User:", result.userId, result.email)
+        console.log("[v0] Redirecting to /verification")
         handleClose()
         router.push("/verification")
       } else {
+        console.log("[v0] Calling signIn action...")
         const result = await signIn(formData)
 
+        console.log("[v0] SignIn result:", result)
+
         if (!result.success) {
+          console.error("[v0] SignIn failed:", result.error)
           setError(result.error || "Sign in failed")
           setStatus("idle")
           return
         }
 
-        console.log("[v0] Signin successful:", result)
+        console.log("[v0] Signin successful, redirecting based on status:", {
+          needsVerification: result.needsVerification,
+          needsOnboarding: result.needsOnboarding,
+          userType: result.userType,
+        })
         handleClose()
 
         if (result.needsVerification) {
@@ -81,7 +96,7 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
         }
       }
     } catch (err) {
-      console.error("[v0] Auth error:", err)
+      console.error("[v0] Unexpected auth error:", err)
       setError("An unexpected error occurred. Please try again.")
       setStatus("idle")
     }
