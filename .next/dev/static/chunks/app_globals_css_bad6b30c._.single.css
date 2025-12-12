@@ -2697,6 +2697,10 @@
     --cell-size: calc(var(--spacing) * 8);
   }
 
+  .running {
+    animation-play-state: running;
+  }
+
   .group-focus-within\/menu-item\:opacity-100:is(:where(.group\/menu-item):focus-within *) {
     opacity: 1;
   }
@@ -3104,6 +3108,12 @@
   @media (hover: hover) {
     .hover\:bg-\[\#00bce6\]:hover {
       background-color: #00bce6;
+    }
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-\[\#1e1e20\]:hover {
+      background-color: #1e1e20;
     }
   }
 

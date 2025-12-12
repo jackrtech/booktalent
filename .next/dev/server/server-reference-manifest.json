@@ -1,51 +1,5 @@
 {
-  "node": {
-    "4090a0212f8e143f392f77a4c404ee5547c6bd6b19": {
-      "workers": {
-        "app/page": {
-          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/waitlist.tsx [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/auth.tsx [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "submitWaitlist",
-          "filename": "app/actions/waitlist.tsx"
-        }
-      },
-      "layer": {
-        "app/page": "action-browser"
-      },
-      "filename": "app/actions/waitlist.tsx",
-      "exportedName": "submitWaitlist"
-    },
-    "40f842a65978d88bcb8157a7fe5f248ed47896b0c2": {
-      "workers": {
-        "app/page": {
-          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/waitlist.tsx [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/auth.tsx [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "signUp",
-          "filename": "app/actions/auth.tsx"
-        }
-      },
-      "layer": {
-        "app/page": "action-browser"
-      },
-      "filename": "app/actions/auth.tsx",
-      "exportedName": "signUp"
-    },
-    "40248c7ddbd1bb82cbe137fa0bfdbebbad8d088e46": {
-      "workers": {
-        "app/page": {
-          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/waitlist.tsx [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/auth.tsx [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "signIn",
-          "filename": "app/actions/auth.tsx"
-        }
-      },
-      "layer": {
-        "app/page": "action-browser"
-      },
-      "filename": "app/actions/auth.tsx",
-      "exportedName": "signIn"
-    }
-  },
+  "node": {},
   "edge": {},
   "encryptionKey": "DmsIIZZS6qjTRY86sR4l1JsnVizHLx23vMHMB33kBh4="
 }

@@ -3,21 +3,32 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
-  console.log("[v0 OAuth Callback] Route hit")
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get("code")
-  const origin = requestUrl.origin
-
-  console.log("[v0 OAuth Callback] Full URL:", request.url)
-  console.log("[v0 OAuth Callback] Code present:", !!code)
-  console.log("[v0 OAuth Callback] Origin:", origin)
-
-  if (!code) {
-    console.log("[v0 OAuth Callback] No code parameter, redirecting to home")
-    return NextResponse.redirect(`${origin}/?error=no_code`)
-  }
-
   try {
+    console.log("[v0 OAuth Callback] Route hit")
+    const requestUrl = new URL(request.url)
+    const code = requestUrl.searchParams.get("code")
+    const origin = requestUrl.origin
+
+    console.log("[v0 OAuth Callback] Full URL:", request.url)
+    console.log("[v0 OAuth Callback] Code present:", !!code)
+    console.log("[v0 OAuth Callback] Origin:", origin)
+
+    if (!code) {
+      console.log("[v0 OAuth Callback] No code parameter, redirecting to home")
+      return NextResponse.redirect(`${origin}/?error=no_code`)
+    }
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+      console.error("[v0 OAuth Callback] Missing environment variables!")
+      return new NextResponse(
+        `<html><body><h1>Configuration Error</h1><p>Missing SUPABASE_URL or SUPABASE_ANON_KEY</p><a href="${origin}">Go Home</a></body></html>`,
+        {
+          status: 500,
+          headers: { "Content-Type": "text/html" },
+        },
+      )
+    }
+
     const cookieStore = await cookies()
     const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
       cookies: {
@@ -144,8 +155,17 @@ export async function GET(request: Request) {
 
     console.log("[v0 OAuth Callback] Redirecting to dashboard")
     return NextResponse.redirect(`${origin}/dashboard/${profile.user_type}`)
-  } catch (error) {
-    console.error("[v0 OAuth Callback] Unexpected error:", error)
-    return NextResponse.redirect(`${origin}/?error=unexpected`)
+  } catch (error: any) {
+    console.error("[v0 OAuth Callback] Top-level error:", error)
+    const requestUrl = new URL(request.url)
+    const origin = requestUrl.origin
+
+    return new NextResponse(
+      `<html><body style="font-family: monospace; padding: 40px;"><h1>OAuth Callback Error</h1><pre style="background: #f5f5f5; padding: 20px; border-radius: 8px;">${error?.message || error?.toString() || "Unknown error"}\n\nStack:\n${error?.stack || "No stack trace"}</pre><a href="${origin}" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #0070f3; color: white; text-decoration: none; border-radius: 5px;">Go Home</a></body></html>`,
+      {
+        status: 500,
+        headers: { "Content-Type": "text/html" },
+      },
+    )
   }
 }
