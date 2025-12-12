@@ -128,19 +128,10 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
     setError(null)
 
     try {
-      const result = await signInWithGoogle()
-
-      if (!result.success) {
-        console.error("[v0] Google OAuth failed:", result.error)
-        setError(result.error || "Google sign in failed")
-        setStatus("idle")
-        return
-      }
-
-      console.log("[v0] Redirecting to Google OAuth...")
-      // The redirect happens server-side, no need to handle client-side
+      await signInWithGoogle()
+      // If we reach here without redirect, something went wrong
     } catch (err) {
-      console.error("[v0] Unexpected Google OAuth error:", err)
+      console.error("[v0] Google OAuth error:", err)
       setError("Failed to connect to Google. Please try again.")
       setStatus("idle")
     }
