@@ -1,13 +1,13 @@
 "use server"
 
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { ServerClient } from "postmark"
 
 export async function submitWaitlist(formData: FormData) {
   const name = ((formData.get("name") as string) || "").trim()
   const email = ((formData.get("email") as string) || "").trim().toLowerCase()
 
-  console.log("SERVER ACTION HIT:", { name, email })
+  console.log("[v0] SERVER ACTION HIT:", { name, email })
 
   // Name: 2+ alphabetic characters (including international), max 50 chars
   const nameRegex = /^[\p{L}\s'-]{2,50}$/u
@@ -34,14 +34,14 @@ export async function submitWaitlist(formData: FormData) {
     }
   }
 
-  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: () => "",
-      set: () => {},
-      remove: () => {},
+  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
   })
 
+  console.log("[v0] Checking for existing user...")
   const { data: existingUser, error: checkError } = await supabase
     .from("waitlist")
     .select("name")
@@ -50,7 +50,7 @@ export async function submitWaitlist(formData: FormData) {
 
   if (checkError && checkError.code !== "PGRST116") {
     // PGRST116 means no rows found, which is what we want
-    console.error("Database check error:", checkError)
+    console.error("[v0] Database check error:", checkError)
     return {
       success: false,
       error: "An error occurred. Please try again.",
@@ -58,6 +58,7 @@ export async function submitWaitlist(formData: FormData) {
   }
 
   if (existingUser) {
+    console.log("[v0] User already exists in waitlist")
     // User already exists
     return {
       success: false,
@@ -66,10 +67,11 @@ export async function submitWaitlist(formData: FormData) {
     }
   }
 
+  console.log("[v0] Inserting new user into waitlist...")
   const { data, error } = await supabase.from("waitlist").insert({ name, email }).select().single()
 
   if (error) {
-    console.error("Insert error:", error)
+    console.error("[v0] Insert error:", error)
     return {
       success: false,
       error: "An error occurred. Please try again.",
