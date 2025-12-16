@@ -193,7 +193,7 @@ export async function signInWithGoogle() {
   const cookieStore = await cookies()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
-  const redirectUrl = `${siteUrl}/auth-success`
+  const redirectUrl = `${siteUrl}/`
 
   console.log("[v0] OAuth redirect URL:", redirectUrl)
 
