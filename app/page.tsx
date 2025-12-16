@@ -10,15 +10,11 @@ import { LandingPageClient } from "@/components/landing-page-client"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@supabase/ssr"
 
 // Ensures the server action is bundled
 void submitWaitlist
 
 export default function LandingPage() {
-  const router = useRouter()
-
   const [card1Visible, setCard1Visible] = useState(false)
   const [card2Visible, setCard2Visible] = useState(false)
   const [card3Visible, setCard3Visible] = useState(false)
@@ -28,22 +24,6 @@ export default function LandingPage() {
   const card2Ref = useRef<HTMLDivElement | null>(null)
   const card3Ref = useRef<HTMLDivElement | null>(null)
   const card4Ref = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-
-    // Check if user just completed OAuth (has session but came from OAuth)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        console.log("[v0] Session detected on homepage, redirecting to verification")
-        // User is authenticated, redirect to verification page
-        router.push("/verification")
-      }
-    })
-  }, [router])
 
   useEffect(() => {
     const createObserver = (ref: React.RefObject<HTMLDivElement | null>, setVisible: (visible: boolean) => void) => {

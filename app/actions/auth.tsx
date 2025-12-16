@@ -1,7 +1,7 @@
 "use server"
 
 import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 export async function signUp(formData: FormData) {
@@ -64,7 +64,42 @@ export async function signUp(formData: FormData) {
     }
   }
 
-  // Profile is automatically created by database trigger
+  const serviceSupabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: (name: string, value: string, options: any) => {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove: (name: string, options: any) => {
+          cookieStore.set({ name, value: "", ...options })
+        },
+      },
+    },
+  )
+
+  const { error: profileError } = await serviceSupabase.from("profiles").insert({
+    id: authData.user.id,
+    email: email,
+    user_type: null,
+    is_verified: false,
+    verification_status: "pending",
+    onboarding_completed: false,
+  })
+
+  if (profileError) {
+    console.error("[v0] Profile creation error:", profileError)
+    return {
+      success: false,
+      error: "Account created but profile setup failed. Please try signing in.",
+      details: profileError,
+    }
+  }
+
+  console.log("[v0] User and profile successfully created:", { email, userId: authData.user.id })
+
   return {
     success: true,
     userId: authData.user.id,
@@ -156,9 +191,10 @@ export async function signInWithGoogle() {
   console.log("[v0] Starting Google OAuth flow")
 
   const cookieStore = await cookies()
+  const headersList = await headers()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
-  const redirectUrl = siteUrl
+  const redirectUrl = `${siteUrl}/auth/callback`
 
   console.log("[v0] OAuth redirect URL:", redirectUrl)
 
@@ -178,7 +214,10 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: redirectUrl,
-      skipBrowserRedirect: false,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   })
 
@@ -199,6 +238,3 @@ export async function signInWithGoogle() {
     success: true,
   }
 }
-
-// Profile creation is handled by database trigger
-// Account type selection will be done on verification page

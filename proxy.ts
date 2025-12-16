@@ -2,14 +2,6 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
-  const url = new URL(request.url)
-  console.log("[v0] Middleware: Processing request for:", url.pathname, url.search)
-
-  if (url.pathname === "/verification") {
-    console.log("[v0] Middleware: Skipping /verification path")
-    return NextResponse.next()
-  }
-
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -58,7 +50,6 @@ export async function proxy(request: NextRequest) {
     },
   })
 
-  // Refresh session
   await supabase.auth.getUser()
 
   return response
