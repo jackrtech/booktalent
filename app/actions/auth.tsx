@@ -194,7 +194,7 @@ export async function signInWithGoogle() {
   const headersList = await headers()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
-  const redirectUrl = `${siteUrl}/auth/callback`
+  const redirectUrl = `${siteUrl}/api/auth/callback`
 
   console.log("[v0] OAuth redirect URL:", redirectUrl)
 
