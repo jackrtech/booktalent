@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
   const url = new URL(request.url)
+  console.log("[v0] Middleware: Processing request for:", url.pathname, url.search)
+
   if (url.pathname === "/verification") {
+    console.log("[v0] Middleware: Skipping /verification path")
     return NextResponse.next()
   }
 

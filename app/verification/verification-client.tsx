@@ -14,15 +14,21 @@ export function VerificationClient() {
   const [user, setUser] = useState<{ email: string; hasUserType: boolean } | null>(null)
 
   useEffect(() => {
+    console.log("[v0] VerificationClient: Component mounted")
+    console.log("[v0] VerificationClient: Search params:", Object.fromEntries(searchParams.entries()))
+  }, [])
+
+  useEffect(() => {
     const code = searchParams.get("code")
+    console.log("[v0] VerificationClient: Code from URL:", code)
 
     if (code && !isProcessing) {
-      console.log("[v0] OAuth code detected, processing...")
+      console.log("[v0] VerificationClient: OAuth code detected, processing...")
       setIsProcessing(true)
 
       handleOAuthCallback(code)
         .then((result) => {
-          console.log("[v0] OAuth callback result:", result)
+          console.log("[v0] VerificationClient: OAuth callback result:", result)
           if (result.success) {
             if (result.hasUserType) {
               router.push(`/onboarding/${result.userType}`)
@@ -36,16 +42,18 @@ export function VerificationClient() {
           }
         })
         .catch((err) => {
-          console.error("[v0] OAuth callback error:", err)
+          console.error("[v0] VerificationClient: OAuth callback error:", err)
           setError("An unexpected error occurred")
         })
         .finally(() => {
           setIsProcessing(false)
         })
     } else if (!code && !user) {
+      console.log("[v0] VerificationClient: No code parameter, checking existing session")
       // No code parameter, check if user is already authenticated
       handleOAuthCallback(null)
         .then((result) => {
+          console.log("[v0] VerificationClient: Session check result:", result)
           if (result.success) {
             if (result.hasUserType) {
               router.push(`/onboarding/${result.userType}`)
@@ -57,12 +65,14 @@ export function VerificationClient() {
           }
         })
         .catch(() => {
+          console.log("[v0] VerificationClient: No valid session, redirecting to home")
           router.push("/")
         })
     }
   }, [searchParams, router, isProcessing, user])
 
   const handleAccountTypeSelection = async (userType: "talent" | "business") => {
+    console.log("[v0] VerificationClient: Account type selected:", userType)
     setIsProcessing(true)
     try {
       const result = await selectAccountType(userType)
@@ -79,6 +89,7 @@ export function VerificationClient() {
   }
 
   if (isProcessing) {
+    console.log("[v0] VerificationClient: Rendering processing state")
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -90,6 +101,7 @@ export function VerificationClient() {
   }
 
   if (error) {
+    console.log("[v0] VerificationClient: Rendering error state:", error)
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
@@ -104,9 +116,11 @@ export function VerificationClient() {
   }
 
   if (!user) {
+    console.log("[v0] VerificationClient: No user, rendering null")
     return null
   }
 
+  console.log("[v0] VerificationClient: Rendering account type selection")
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8 text-center">

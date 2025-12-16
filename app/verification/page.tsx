@@ -1,10 +1,21 @@
+import { Suspense } from "react"
+import { VerificationClient } from "./verification-client"
+
 export default function VerificationPage() {
+  console.log("[v0] Verification page: Loading")
+
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Verification Page Test</h1>
-        <p className="text-gray-400">If you can see this, the route works!</p>
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Loading verification page...</p>
+          </div>
+        </div>
+      }
+    >
+      <VerificationClient />
+    </Suspense>
   )
 }
