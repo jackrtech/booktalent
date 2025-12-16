@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
+  const url = new URL(request.url)
+  if (url.pathname === "/verification") {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -49,14 +54,6 @@ export async function proxy(request: NextRequest) {
       },
     },
   })
-
-  const url = new URL(request.url)
-  const code = url.searchParams.get("code")
-
-  if (code) {
-    console.log("[v0] Middleware: Exchanging OAuth code for session")
-    await supabase.auth.exchangeCodeForSession(code)
-  }
 
   // Refresh session
   await supabase.auth.getUser()
