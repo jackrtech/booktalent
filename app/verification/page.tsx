@@ -26,10 +26,49 @@ export default async function VerificationPage() {
     redirect("/")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", user.id).single()
+  let profile = await supabase.from("profiles").select("user_type, email").eq("id", user.id).single()
 
-  if (profile?.user_type) {
-    redirect(`/onboarding/${profile.user_type}`)
+  if (profile.error || !profile.data) {
+    console.log("[v0] Profile not found for user, creating now:", user.id)
+
+    // Use service role key to bypass RLS
+    const serviceSupabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get: (name: string) => cookieStore.get(name)?.value,
+          set: (name: string, value: string, options: any) => {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove: (name: string, options: any) => {
+            cookieStore.set({ name, value: "", ...options })
+          },
+        },
+      },
+    )
+
+    const { error: insertError } = await serviceSupabase.from("profiles").insert({
+      id: user.id,
+      email: user.email,
+      user_type: null,
+      is_verified: false,
+      verification_status: "pending",
+      onboarding_completed: false,
+    })
+
+    if (insertError) {
+      console.error("[v0] Failed to create profile:", insertError)
+    } else {
+      console.log("[v0] Profile created successfully for OAuth user")
+    }
+
+    // Refresh profile data
+    profile = await supabase.from("profiles").select("user_type, email").eq("id", user.id).single()
+  }
+
+  if (profile.data?.user_type) {
+    redirect(`/onboarding/${profile.data.user_type}`)
   }
 
   return (
