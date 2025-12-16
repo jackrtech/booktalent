@@ -1,107 +1,108 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
+import { createBrowserClient } from "@supabase/ssr"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { handleOAuthCallback, selectAccountType } from "@/app/actions/auth"
 
 export function VerificationClient() {
-  const searchParams = useSearchParams()
   const router = useRouter()
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<{ email: string; hasUserType: boolean } | null>(null)
+  const [user, setUser] = useState<{ email: string; userType: string | null } | null>(null)
 
   useEffect(() => {
-    console.log("[v0] VerificationClient: Component mounted")
-    console.log("[v0] VerificationClient: Search params:", Object.fromEntries(searchParams.entries()))
-  }, [])
+    console.log("[v0] VerificationClient: Checking user session")
 
-  useEffect(() => {
-    const code = searchParams.get("code")
-    console.log("[v0] VerificationClient: Code from URL:", code)
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
 
-    if (code && !isProcessing) {
-      console.log("[v0] VerificationClient: OAuth code detected, processing...")
-      setIsProcessing(true)
+    // Check if user is authenticated
+    supabase.auth.getUser().then(({ data: { user: authUser }, error: authError }) => {
+      if (authError || !authUser) {
+        console.log("[v0] No authenticated user, redirecting to home")
+        router.push("/")
+        return
+      }
 
-      handleOAuthCallback(code)
-        .then((result) => {
-          console.log("[v0] VerificationClient: OAuth callback result:", result)
-          if (result.success) {
-            if (result.hasUserType) {
-              router.push(`/onboarding/${result.userType}`)
-            } else {
-              setUser({ email: result.email, hasUserType: false })
-              // Remove code from URL
-              router.replace("/verification")
-            }
+      console.log("[v0] User authenticated:", authUser.email)
+
+      // Get user profile (created automatically by trigger)
+      supabase
+        .from("profiles")
+        .select("user_type, email")
+        .eq("id", authUser.id)
+        .single()
+        .then(({ data: profile, error: profileError }) => {
+          if (profileError) {
+            console.error("[v0] Profile fetch error:", profileError)
+            setError("Failed to load profile. Please try refreshing.")
+            setIsLoading(false)
+            return
+          }
+
+          console.log("[v0] Profile loaded:", profile)
+
+          if (profile.user_type) {
+            // User has already selected account type, redirect to onboarding
+            console.log("[v0] User type exists, redirecting to onboarding")
+            router.push(`/onboarding/${profile.user_type}`)
           } else {
-            setError(result.error || "Failed to complete sign in")
+            // Show account type selection
+            setUser({ email: profile.email, userType: null })
+            setIsLoading(false)
           }
         })
-        .catch((err) => {
-          console.error("[v0] VerificationClient: OAuth callback error:", err)
-          setError("An unexpected error occurred")
-        })
-        .finally(() => {
-          setIsProcessing(false)
-        })
-    } else if (!code && !user) {
-      console.log("[v0] VerificationClient: No code parameter, checking existing session")
-      // No code parameter, check if user is already authenticated
-      handleOAuthCallback(null)
-        .then((result) => {
-          console.log("[v0] VerificationClient: Session check result:", result)
-          if (result.success) {
-            if (result.hasUserType) {
-              router.push(`/onboarding/${result.userType}`)
-            } else {
-              setUser({ email: result.email, hasUserType: false })
-            }
-          } else {
-            router.push("/")
-          }
-        })
-        .catch(() => {
-          console.log("[v0] VerificationClient: No valid session, redirecting to home")
-          router.push("/")
-        })
-    }
-  }, [searchParams, router, isProcessing, user])
+    })
+  }, [router])
 
   const handleAccountTypeSelection = async (userType: "talent" | "business") => {
-    console.log("[v0] VerificationClient: Account type selected:", userType)
-    setIsProcessing(true)
-    try {
-      const result = await selectAccountType(userType)
-      if (result.success) {
-        router.push(`/onboarding/${userType}`)
-      } else {
-        setError(result.error || "Failed to set account type")
-      }
-    } catch (err) {
-      setError("An unexpected error occurred")
-    } finally {
-      setIsProcessing(false)
+    console.log("[v0] Account type selected:", userType)
+    setIsLoading(true)
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+
+    if (!authUser) {
+      setError("Not authenticated")
+      setIsLoading(false)
+      return
     }
+
+    const { error: updateError } = await supabase.from("profiles").update({ user_type: userType }).eq("id", authUser.id)
+
+    if (updateError) {
+      console.error("[v0] Failed to update user type:", updateError)
+      setError("Failed to set account type. Please try again.")
+      setIsLoading(false)
+      return
+    }
+
+    console.log("[v0] User type updated successfully, redirecting to onboarding")
+    router.push(`/onboarding/${userType}`)
   }
 
-  if (isProcessing) {
-    console.log("[v0] VerificationClient: Rendering processing state")
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#14DFFF] border-r-transparent mb-4"></div>
-          <p className="text-gray-400">Completing sign in...</p>
+          <p className="text-gray-400">Loading...</p>
         </div>
       </div>
     )
   }
 
   if (error) {
-    console.log("[v0] VerificationClient: Rendering error state:", error)
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
@@ -116,11 +117,9 @@ export function VerificationClient() {
   }
 
   if (!user) {
-    console.log("[v0] VerificationClient: No user, rendering null")
     return null
   }
 
-  console.log("[v0] VerificationClient: Rendering account type selection")
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8 text-center">
@@ -134,7 +133,7 @@ export function VerificationClient() {
         <div className="space-y-4">
           <Button
             onClick={() => handleAccountTypeSelection("talent")}
-            disabled={isProcessing}
+            disabled={isLoading}
             className="w-full bg-[#14DFFF] hover:bg-[#00bce6] text-black font-semibold h-12 rounded-full text-base"
           >
             I'm Talent
@@ -142,7 +141,7 @@ export function VerificationClient() {
 
           <Button
             onClick={() => handleAccountTypeSelection("business")}
-            disabled={isProcessing}
+            disabled={isLoading}
             className="w-full bg-white hover:bg-gray-200 text-black font-semibold h-12 rounded-full text-base"
           >
             I'm a Business

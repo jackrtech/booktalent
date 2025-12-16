@@ -64,42 +64,7 @@ export async function signUp(formData: FormData) {
     }
   }
 
-  const serviceSupabase = createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: any) => {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove: (name: string, options: any) => {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
-
-  const { error: profileError } = await serviceSupabase.from("profiles").insert({
-    id: authData.user.id,
-    email: email,
-    user_type: null,
-    is_verified: false,
-    verification_status: "pending",
-    onboarding_completed: false,
-  })
-
-  if (profileError) {
-    console.error("[v0] Profile creation error:", profileError)
-    return {
-      success: false,
-      error: "Account created but profile setup failed. Please try signing in.",
-      details: profileError,
-    }
-  }
-
-  console.log("[v0] User and profile successfully created:", { email, userId: authData.user.id })
-
+  // Profile is automatically created by database trigger
   return {
     success: true,
     userId: authData.user.id,
@@ -193,7 +158,7 @@ export async function signInWithGoogle() {
   const cookieStore = await cookies()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
-  const redirectUrl = `${siteUrl}/`
+  const redirectUrl = `${siteUrl}/verification`
 
   console.log("[v0] OAuth redirect URL:", redirectUrl)
 
@@ -214,10 +179,6 @@ export async function signInWithGoogle() {
     options: {
       redirectTo: redirectUrl,
       skipBrowserRedirect: false,
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent",
-      },
     },
   })
 
@@ -239,159 +200,5 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function handleOAuthCallback(code: string | null) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: (name: string) => cookieStore.get(name)?.value,
-      set: (name: string, value: string, options: any) => {
-        cookieStore.set({ name, value, ...options })
-      },
-      remove: (name: string, options: any) => {
-        cookieStore.set({ name, value: "", ...options })
-      },
-    },
-  })
-
-  // If there's a code, exchange it for a session
-  if (code) {
-    console.log("[v0] Exchanging OAuth code for session")
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (exchangeError) {
-      console.error("[v0] Failed to exchange code:", exchangeError)
-      return {
-        success: false,
-        error: "Failed to complete OAuth sign in",
-      }
-    }
-    console.log("[v0] OAuth code exchanged successfully")
-  }
-
-  // Get the current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return {
-      success: false,
-      error: "No authenticated user found",
-    }
-  }
-
-  // Check if profile exists
-  let { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("user_type, email")
-    .eq("id", user.id)
-    .single()
-
-  // If no profile exists, create one using service role key
-  if (profileError || !profile) {
-    console.log("[v0] Profile not found for OAuth user, creating now:", user.id)
-
-    const serviceSupabase = createServerClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get: (name: string) => cookieStore.get(name)?.value,
-          set: (name: string, value: string, options: any) => {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove: (name: string, options: any) => {
-            cookieStore.set({ name, value: "", ...options })
-          },
-        },
-      },
-    )
-
-    const { error: insertError } = await serviceSupabase.from("profiles").insert({
-      id: user.id,
-      email: user.email,
-      user_type: null,
-      is_verified: false,
-      verification_status: "pending",
-      onboarding_completed: false,
-    })
-
-    if (insertError) {
-      console.error("[v0] Failed to create profile:", insertError)
-      return {
-        success: false,
-        error: "Failed to create user profile",
-      }
-    }
-
-    console.log("[v0] Profile created successfully for OAuth user")
-    profile = { user_type: null, email: user.email }
-  }
-
-  return {
-    success: true,
-    email: user.email || "",
-    hasUserType: !!profile.user_type,
-    userType: profile.user_type,
-  }
-}
-
-export async function selectAccountType(userType: "talent" | "business") {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    cookies: {
-      get: (name: string) => cookieStore.get(name)?.value,
-      set: (name: string, value: string, options: any) => {
-        cookieStore.set({ name, value, ...options })
-      },
-      remove: (name: string, options: any) => {
-        cookieStore.set({ name, value: "", ...options })
-      },
-    },
-  })
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return {
-      success: false,
-      error: "Not authenticated",
-    }
-  }
-
-  // Use service role key to update profile
-  const serviceSupabase = createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: any) => {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove: (name: string, options: any) => {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
-
-  const { error } = await serviceSupabase.from("profiles").update({ user_type: userType }).eq("id", user.id)
-
-  if (error) {
-    console.error("[v0] Failed to update user_type:", error)
-    return {
-      success: false,
-      error: "Failed to set account type",
-    }
-  }
-
-  console.log("[v0] User type set to:", userType)
-
-  return {
-    success: true,
-    userType,
-  }
-}
+// Profile creation is handled by database trigger
+// Account type selection will be done on verification page
