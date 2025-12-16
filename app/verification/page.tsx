@@ -4,7 +4,11 @@ import { cookies } from "next/headers"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function VerificationPage() {
+export default async function VerificationPage({
+  searchParams,
+}: {
+  searchParams: { code?: string }
+}) {
   const cookieStore = await cookies()
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
     cookies: {
@@ -17,6 +21,20 @@ export default async function VerificationPage() {
       },
     },
   })
+
+  const code = await searchParams
+  if (code?.code) {
+    console.log("[v0] Exchanging OAuth code for session")
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code.code)
+
+    if (exchangeError) {
+      console.error("[v0] Failed to exchange code:", exchangeError)
+      redirect("/?error=oauth_failed")
+    }
+
+    // Redirect to remove code from URL
+    redirect("/verification")
+  }
 
   const {
     data: { user },
