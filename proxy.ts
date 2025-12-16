@@ -50,6 +50,15 @@ export async function proxy(request: NextRequest) {
     },
   })
 
+  const url = new URL(request.url)
+  const code = url.searchParams.get("code")
+
+  if (code) {
+    console.log("[v0] Middleware: Exchanging OAuth code for session")
+    await supabase.auth.exchangeCodeForSession(code)
+  }
+
+  // Refresh session
   await supabase.auth.getUser()
 
   return response
