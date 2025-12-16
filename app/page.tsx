@@ -10,7 +10,6 @@ import { LandingPageClient } from "@/components/landing-page-client"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useEffect, useRef, useState } from "react"
-import { OAuthHandler } from "@/components/oauth-handler"
 
 // Ensures the server action is bundled
 void submitWaitlist
@@ -59,8 +58,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#1C1C1C] overflow-x-hidden">
-      <OAuthHandler />
-
       <Header />
 
       {/* Hero Section */}

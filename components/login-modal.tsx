@@ -60,9 +60,14 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
         }
 
         console.log("[v0] Signup successful! User:", result.userId, result.email)
-        console.log("[v0] Redirecting to /verification")
+        console.log("[v0] Closing modal and redirecting to /verification")
+
         handleClose()
-        router.push("/verification")
+        setTimeout(() => {
+          console.log("[v0] Now navigating to /verification")
+          router.push("/verification")
+          router.refresh()
+        }, 100)
       } else {
         console.log("[v0] Calling signIn action...")
         const result = await signIn(formData)
