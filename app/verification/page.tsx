@@ -31,9 +31,8 @@ export default async function VerificationPage({
       console.error("[v0] Failed to exchange code:", exchangeError)
       redirect("/?error=oauth_failed")
     }
-
-    // Redirect to remove code from URL
-    redirect("/verification")
+    // Code exchanged successfully, continue rendering the page
+    console.log("[v0] OAuth code exchanged successfully")
   }
 
   const {
