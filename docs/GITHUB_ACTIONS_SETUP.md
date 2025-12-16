@@ -57,11 +57,11 @@ Add these three secrets:
 
 ### Step 4: Push This Workflow File
 
-\`\`\`bash
+```bash
 git add .github/workflows/deploy.yml
 git commit -m "Add automated database migrations via GitHub Actions"
 git push origin main
-\`\`\`
+```
 
 ### Step 5: Verify It Works
 
@@ -78,18 +78,18 @@ git push origin main
 **Every time you need to change the database:**
 
 1. Create a migration file locally:
-   \`\`\`bash
+   ```bash
    supabase migration new add_new_feature
-   \`\`\`
+   ```
 
 2. Edit the `.sql` file with your changes
 
 3. Push to GitHub:
-   \`\`\`bash
+   ```bash
    git add .
    git commit -m "Add new feature with database changes"
    git push origin main
-   \`\`\`
+   ```
 
 4. **GitHub Actions automatically:**
    - Runs your new migration

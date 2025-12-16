@@ -1,13 +1,10 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { NextResponse, type NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
-  const origin = requestUrl.origin
-
-  console.log("[v0] OAuth callback hit - Code:", code ? "present" : "missing")
 
   if (code) {
     const cookieStore = await cookies()
@@ -25,62 +22,44 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
-      console.log("[v0] Code exchange successful")
+    // Check if user needs profile creation
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-      // Get user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (user) {
-        console.log("[v0] User:", user.email)
-
-        // Use service role to create profile
-        const serviceSupabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value
-            },
-            set(name: string, value: string, options: any) {
-              cookieStore.set({ name, value, ...options })
-            },
-            remove(name: string, options: any) {
-              cookieStore.set({ name, value: "", ...options })
-            },
+    if (user) {
+      // Use service role to check/create profile
+      const adminSupabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: "", ...options })
+          },
+        },
+      })
+
+      const { data: existingProfile } = await adminSupabase.from("profiles").select("id").eq("id", user.id).single()
+
+      if (!existingProfile) {
+        // New user - create profile
+        await adminSupabase.from("profiles").insert({
+          id: user.id,
+          email: user.email,
         })
 
-        // Check if profile exists
-        const { data: existingProfile } = await serviceSupabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle()
-
-        console.log("[v0] Profile exists:", !!existingProfile)
-
-        // Create profile if it doesn't exist
-        if (!existingProfile) {
-          console.log("[v0] Creating new profile")
-          await serviceSupabase.from("profiles").insert({
-            id: user.id,
-            email: user.email,
-            user_type: null,
-            is_verified: false,
-            verification_status: "pending",
-            onboarding_completed: false,
-          })
-
-          return NextResponse.redirect(`${origin}/verification`)
-        }
+        // Redirect to verification
+        return NextResponse.redirect(new URL("/verification", requestUrl.origin))
       }
-    } else {
-      console.error("[v0] Exchange error:", error)
     }
   }
 
-  return NextResponse.redirect(origin)
+  // Redirect to home
+  return NextResponse.redirect(new URL("/", requestUrl.origin))
 }
