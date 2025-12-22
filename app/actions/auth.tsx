@@ -1,7 +1,7 @@
 "use server"
 
 import { createServerClient } from "@supabase/ssr"
-import { cookies, headers } from "next/headers"
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 export async function signUp(formData: FormData) {
@@ -191,10 +191,9 @@ export async function signInWithGoogle() {
   console.log("[v0] Starting Google OAuth flow")
 
   const cookieStore = await cookies()
-  const headersList = await headers()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
-  const redirectUrl = `${siteUrl}/auth/callback`
+  const redirectUrl = siteUrl // Just the homepage
 
   console.log("[v0] OAuth redirect URL:", redirectUrl)
 

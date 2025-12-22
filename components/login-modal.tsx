@@ -125,13 +125,13 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
   const handleGoogleSignIn = async () => {
     console.log("[v0] Starting Google OAuth sign in")
     setStatus("loading")
-    setError(null)
 
     try {
       await signInWithGoogle()
-      // Browser will redirect to Google, so we never reach here in success case
+      // Browser will redirect to Google, no need for error handling here
     } catch (err) {
       console.error("[v0] Google OAuth error:", err)
+      // Only show error if OAuth initiation itself fails
       setError("Failed to start Google sign in. Please try again.")
       setStatus("idle")
     }

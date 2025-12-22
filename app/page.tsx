@@ -9,6 +9,7 @@ import Image from "next/image"
 import { LandingPageClient } from "@/components/landing-page-client"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { OAuthRedirectHandler } from "@/components/oauth-redirect-handler"
 import { useEffect, useRef, useState } from "react"
 
 // Ensures the server action is bundled
@@ -58,6 +59,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#1C1C1C] overflow-x-hidden">
+      <OAuthRedirectHandler />
+
       <Header />
 
       {/* Hero Section */}
