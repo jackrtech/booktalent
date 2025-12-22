@@ -237,3 +237,50 @@ export async function signInWithGoogle() {
     success: true,
   }
 }
+
+export async function signInWithApple() {
+  console.log("[v0] Starting Apple OAuth flow")
+
+  const cookieStore = await cookies()
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://book-talent.vercel.app"
+  const redirectUrl = siteUrl // Just the homepage
+
+  console.log("[v0] OAuth redirect URL:", redirectUrl)
+
+  const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+    cookies: {
+      get: (name: string) => cookieStore.get(name)?.value,
+      set: (name: string, value: string, options: any) => {
+        cookieStore.set({ name, value, ...options })
+      },
+      remove: (name: string, options: any) => {
+        cookieStore.set({ name, value: "", ...options })
+      },
+    },
+  })
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: {
+      redirectTo: redirectUrl,
+    },
+  })
+
+  if (error) {
+    console.error("[v0] Apple OAuth initiation error:", error)
+    return {
+      success: false,
+      error: error.message,
+    }
+  }
+
+  if (data.url) {
+    console.log("[v0] Redirecting to Apple OAuth:", data.url)
+    redirect(data.url)
+  }
+
+  return {
+    success: true,
+  }
+}

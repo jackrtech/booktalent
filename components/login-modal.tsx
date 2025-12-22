@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { X, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { signUp, signIn, signInWithGoogle } from "@/app/actions/auth"
+import { signUp, signIn, signInWithGoogle, signInWithApple } from "@/app/actions/auth"
 import { useRouter } from "next/navigation"
 
 interface LoginModalProps {
@@ -128,6 +128,12 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
     // Browser redirects to Google, no error handling needed
   }
 
+  const handleAppleSignIn = async () => {
+    console.log("[v0] Starting Apple OAuth sign in")
+    await signInWithApple()
+    // Browser redirects to Apple, no error handling needed
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
@@ -190,12 +196,18 @@ export function LoginModal({ isOpen, onClose, initialMode = "login" }: LoginModa
               </svg>
             </button>
             <button
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+              onClick={handleAppleSignIn}
+              disabled={status === "loading"}
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center cursor-pointer transition-colors hover:bg-[#1e1e20] disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: "#161618" }}
-              disabled
-              aria-label="Apple Sign In (Coming Soon)"
+              aria-label="Continue with Apple"
             >
-              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gray-700 rounded" />
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08l.02-.02ZM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25Z"
+                  fill="white"
+                />
+              </svg>
             </button>
             <button
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
