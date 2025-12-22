@@ -81,79 +81,13 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] User found:", user.email, "ID:", user.id)
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("[v0] ERROR: Missing SUPABASE_SERVICE_ROLE_KEY")
-      return NextResponse.json({ error: "Server configuration error - missing service role key" }, { status: 500 })
-    }
+    const redirectUrl = `${origin}/verification`
+    console.log("[v0] Redirecting to:", redirectUrl)
 
-    // Use service role to check/create profile
-    console.log("[v0] Creating service role client...")
-    const serviceSupabase = createServerClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    })
-    console.log("[v0] Service role client created")
-
-    // Check if profile exists
-    console.log("[v0] Checking for existing profile...")
-    const { data: existingProfile, error: profileCheckError } = await serviceSupabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle()
-
-    if (profileCheckError) {
-      console.error("[v0] Profile check error:", profileCheckError)
-      // Continue anyway - profile might have been created by trigger
-    }
-
-    console.log("[v0] Profile exists:", !!existingProfile)
-
-    // Create profile if it doesn't exist
-    if (!existingProfile) {
-      console.log("[v0] Creating new profile...")
-      const { error: insertError } = await serviceSupabase.from("profiles").insert({
-        id: user.id,
-        email: user.email,
-        user_type: null,
-        is_verified: false,
-        verification_status: "pending",
-        onboarding_completed: false,
-      })
-
-      if (insertError) {
-        console.error("[v0] Profile creation error:", insertError)
-        // Continue anyway - might have been created by trigger
-      } else {
-        console.log("[v0] Profile created successfully")
-      }
-
-      console.log("[v0] Redirecting to /verification")
-      const redirectUrl = new URL("/verification", origin)
-      return NextResponse.redirect(redirectUrl.toString())
-    }
-
-    console.log("[v0] Profile already exists, redirecting to origin")
-    return NextResponse.redirect(origin)
+    return NextResponse.redirect(redirectUrl)
   } catch (error: any) {
     console.error("[v0] CRITICAL ERROR in OAuth callback:", error)
     console.error("[v0] Error stack:", error.stack)
-    return NextResponse.json(
-      {
-        error: "Internal server error during OAuth callback",
-        message: error.message,
-        stack: error.stack,
-      },
-      { status: 500 },
-    )
+    return NextResponse.redirect(`${request.url.split("?")[0].replace("/auth/callback", "")}?error=oauth_error`)
   }
 }
