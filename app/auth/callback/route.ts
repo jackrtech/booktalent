@@ -138,7 +138,8 @@ export async function GET(request: NextRequest) {
       }
 
       console.log("[v0] Redirecting to /verification")
-      return NextResponse.redirect(`${origin}/verification`)
+      const redirectUrl = new URL("/verification", origin)
+      return NextResponse.redirect(redirectUrl.toString())
     }
 
     console.log("[v0] Profile already exists, redirecting to origin")
